@@ -1,8 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
+using Mirror;
 using UnityEngine;
-using FishNet.Connection;
-using FishNet.Object;
 
 public class PlayerController : NetworkBehaviour
 {
@@ -14,17 +11,18 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private float _lookSpeed = 2.0f;
     [SerializeField] private float _lookXLimit = 45.0f;
     [SerializeField] private float _cameraYOffset = 0.4f;
- 
+
     private CharacterController characterController;
     private Vector3 moveDirection = Vector3.zero;
     private float rotationX = 0;
     private bool _canMove = true;
     private Camera _playerCamera;
-    private bool _isLoading = true; 
-    
-    public void OnSceneLoadEnd()
+
+    public override void OnStartClient()
     {
-        if (base.IsOwner)
+        base.OnStartClient();
+
+        if (base.isOwned)
         {
             _playerCamera = Camera.main;
             _playerCamera.transform.position = new Vector3(transform.position.x, transform.position.y + _cameraYOffset, transform.position.z);
@@ -34,35 +32,29 @@ public class PlayerController : NetworkBehaviour
         {
             gameObject.GetComponent<PlayerController>().enabled = false;
         }
-        
-        _isLoading = false; 
     }
- 
+
     void Start()
     {
         characterController = GetComponent<CharacterController>();
-        _isLoading = true; 
-        NetworkSceneLoader.Instance.OnSceneLoaded += OnSceneLoadEnd;
     }
-    
+
     void Update()
     {
-        if(_isLoading) return;
-        
         bool isRunning = false;
- 
+
         // Press Left Shift to run
         isRunning = Input.GetKey(KeyCode.LeftShift);
- 
+
         // We are grounded, so recalculate move direction based on axis
         Vector3 forward = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
- 
+
         float curSpeedX = _canMove ? (isRunning ? _runningSpeed : _walkingSpeed) * Input.GetAxis("Vertical") : 0;
         float curSpeedY = _canMove ? (isRunning ? _runningSpeed : _walkingSpeed) * Input.GetAxis("Horizontal") : 0;
         float movementDirectionY = moveDirection.y;
         moveDirection = (forward * curSpeedX) + (right * curSpeedY);
- 
+
         if (Input.GetButton("Jump") && _canMove && characterController.isGrounded)
         {
             moveDirection.y = _jumpSpeed;
@@ -71,15 +63,15 @@ public class PlayerController : NetworkBehaviour
         {
             moveDirection.y = movementDirectionY;
         }
- 
+
         if (!characterController.isGrounded)
         {
             moveDirection.y -= _gravity * Time.deltaTime;
         }
- 
+
         // Move the controller
         characterController.Move(moveDirection * Time.deltaTime);
- 
+
         // Player and Camera rotation
         if (_canMove && _playerCamera != null)
         {
@@ -90,4 +82,3 @@ public class PlayerController : NetworkBehaviour
         }
     }
 }
- 
